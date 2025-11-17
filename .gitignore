@@ -5,6 +5,7 @@ linux/
 macos/
 web/
 windows/
+lib/
 
 # Miscellaneous
 *.class
