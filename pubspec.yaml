@@ -21,6 +21,7 @@ dependencies:
   firebase_database: ^12.0.4
   google_sign_in: ^6.2.1
   firebase_ui_oauth_google: ^2.0.1
+  syncfusion_flutter_calendar: ^31.2.12
 
 dev_dependencies:
   flutter_test:
