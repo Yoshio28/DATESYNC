@@ -17,7 +17,11 @@ class PerfilUsuario extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text("Perfil de usuario")),
+      appBar: AppBar(
+        title: Text("Perfil de usuario"),
+        backgroundColor: Colors.redAccent,
+        foregroundColor: Colors.white,
+      ),
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance
             .collection("usuarios")

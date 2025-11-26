@@ -18,6 +18,8 @@ class _CalendarioState extends State<Calendario> {
       drawer: Navbar(),
       appBar: AppBar(
         title: Text('Agenda'),
+        backgroundColor: Colors.redAccent,
+        foregroundColor: Colors.white,
         actions: [
           PopupMenuButton<String>(
             onSelected: (String vista) {
