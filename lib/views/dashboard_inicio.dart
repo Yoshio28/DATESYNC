@@ -1,4 +1,5 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:datesync/views/calendario.dart';
 import 'package:datesync/views/dashboard_analisis.dart';
 import 'package:datesync/views/dashboard_completo_tarea.dart';
 import 'package:datesync/views/dashboard_tareas.dart';
@@ -38,7 +39,7 @@ class Dashboardinicio extends StatelessWidget {
               context,
               'Calendario',
               const Color.fromARGB(255, 224, 135, 2),
-              DashboardCompletoTarea(),
+              Calendario(),
             ),
             _cajones(
               context,
