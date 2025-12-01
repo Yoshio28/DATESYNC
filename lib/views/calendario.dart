@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:datesync/model/NavBar.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:datesync/model/calendarController.dart';
 
 class Calendario extends StatefulWidget {
   @override
@@ -8,17 +11,32 @@ class Calendario extends StatefulWidget {
 }
 
 class _CalendarioState extends State<Calendario> {
-  List<Appointment> _appointments = getAppointments();
   CalendarView _actualView = CalendarView.week;
   CalendarController _calendarController = CalendarController();
+  final CalendarControllerHelper _helper = CalendarControllerHelper();
+  List<Map<String, dynamic>> taskData = [];
 
   @override
   Widget build(BuildContext context) {
+    final User? user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return Scaffold(
+        drawer: Navbar(),
+        appBar: AppBar(
+          title: Text('Agenda'),
+          backgroundColor: Colors.redAccent,
+          foregroundColor: Colors.white,
+        ),
+        body: Center(child: Text("No hay un usuario autenticado")),
+      );
+    }
+
     return Scaffold(
       drawer: Navbar(),
       appBar: AppBar(
         title: Text('Agenda'),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: const Color.fromARGB(255, 1, 231, 181),
         foregroundColor: Colors.white,
         actions: [
           PopupMenuButton<String>(
@@ -53,190 +71,62 @@ class _CalendarioState extends State<Calendario> {
           ),
         ],
       ),
-      body: SfCalendar(
-        controller: _calendarController,
-        view: _actualView,
-        initialDisplayDate: DateTime.now(),
-        dataSource: MeetingDataSource(_appointments),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('tareas')
+            .where('startTime', isNotEqualTo: null)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          List<Appointment> appointments = [];
+          taskData.clear();
+          if (snapshot.hasData) {
+            for (int index = 0; index < snapshot.data!.docs.length; index++) {
+              final doc = snapshot.data!.docs[index];
+              final data = doc.data() as Map<String, dynamic>;
+              if (data['startTime'] != null && data['endTime'] != null) {
+                taskData.add(data);
+                appointments.add(
+                  Appointment(
+                    id: index.toString(),
+                    startTime: (data['startTime'] as Timestamp).toDate(),
+                    endTime: (data['endTime'] as Timestamp).toDate(),
+                    subject: data['tarea'] ?? 'Sin título',
+                    color: Color(data['color'] ?? Colors.blue.value),
+                    recurrenceRule: data['recurrenceRule'],
+                  ),
+                );
+              }
+            }
+          }
+
+          return SfCalendar(
+            controller: _calendarController,
+            view: _actualView,
+            initialDisplayDate: DateTime.now(),
+            dataSource: MeetingDataSource(appointments),
+            onTap: (CalendarTapDetails details) {
+              if (details.targetElement == CalendarElement.appointment) {
+                int index = int.parse(details.appointments!.first.id);
+                _helper.showEventDetails(context, taskData[index]);
+              }
+            },
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEventDialog(context),
+        onPressed: () => _helper.showAddEventDialog(context),
         child: Icon(Icons.add),
       ),
     );
   }
-
-  void _showAddEventDialog(BuildContext context) {
-    String subject = '';
-    DateTime startTime = DateTime.now();
-    DateTime endTime = DateTime.now().add(Duration(hours: 1));
-    String recurrence = 'Evento unico';
-    Color selectedColor = Colors.blue;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Agregar Evento'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  decoration: InputDecoration(labelText: 'Sprint a Asignar'),
-                  onChanged: (value) => subject = value,
-                ),
-                TextButton(
-                  onPressed: () async {
-                    DateTime? pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: startTime,
-                      firstDate: DateTime(2025),
-                      lastDate: DateTime(2080),
-                    );
-                    if (pickedDate != null) {
-                      TimeOfDay? pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.fromDateTime(startTime),
-                      );
-                      if (pickedTime != null) {
-                        setState(() {
-                          startTime = DateTime(
-                            pickedDate.year,
-                            pickedDate.month,
-                            pickedDate.day,
-                            pickedTime.hour,
-                            pickedTime.minute,
-                          );
-                        });
-                      }
-                    }
-                  },
-                  child: Text('Inicio: ${startTime.toString()}'),
-                ),
-
-                TextButton(
-                  onPressed: () async {
-                    DateTime? pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: endTime,
-                      firstDate: DateTime(20),
-                      lastDate: DateTime(2101),
-                    );
-                    if (pickedDate != null) {
-                      TimeOfDay? pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.fromDateTime(endTime),
-                      );
-                      if (pickedTime != null) {
-                        setState(() {
-                          endTime = DateTime(
-                            pickedDate.year,
-                            pickedDate.month,
-                            pickedDate.day,
-                            pickedTime.hour,
-                            pickedTime.minute,
-                          );
-                        });
-                      }
-                    }
-                  },
-                  child: Text('Fin: ${endTime.toString()}'),
-                ),
-                DropdownButton<String>(
-                  value: recurrence,
-                  items: ['Evento unico', 'Diaria', 'Semanal', 'Mensual'].map((
-                    String value,
-                  ) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (value) => setState(() => recurrence = value!),
-                ),
-                DropdownButton<Color>(
-                  value: selectedColor,
-                  items:
-                      [
-                        Colors.red,
-                        Colors.blue,
-                        Colors.green,
-                        Colors.yellow,
-                        Colors.purple,
-                      ].map((Color color) {
-                        return DropdownMenuItem<Color>(
-                          value: color,
-                          child: Container(width: 20, height: 20, color: color),
-                        );
-                      }).toList(),
-                  onChanged: (value) => setState(() => selectedColor = value!),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                String? recurrenceRule;
-                if (recurrence == 'Diaria')
-                  recurrenceRule = 'FREQ=DAILY;COUNT=30';
-                else if (recurrence == 'Semanal')
-                  recurrenceRule = 'FREQ=WEEKLY;COUNT=4';
-                else if (recurrence == 'Mensual')
-                  recurrenceRule = 'FREQ=MONTHLY;COUNT=1';
-
-                Appointment newAppointment = Appointment(
-                  startTime: startTime,
-                  endTime: endTime,
-                  subject: subject,
-                  color: selectedColor,
-                  recurrenceRule: recurrenceRule,
-                );
-
-                setState(() {
-                  _appointments.add(newAppointment);
-                });
-
-                Navigator.of(context).pop();
-              },
-              child: Text('Agregar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-// A mejorar
-List<Appointment> getAppointments() {
-  List<Appointment> meetings = <Appointment>[];
-  final DateTime today = DateTime.now();
-  final DateTime startTime = DateTime(
-    today.year,
-    today.month,
-    today.day,
-    9,
-    0,
-    0,
-  );
-  final DateTime endTime = startTime.add(const Duration(hours: 1));
-
-  meetings.add(
-    Appointment(
-      startTime: startTime,
-      endTime: endTime,
-      subject: 'Daily Meeting',
-      color: Colors.blue,
-      recurrenceRule: 'FREQ=DAILY;COUNT=30',
-    ),
-  );
-  return meetings;
 }
 
 class MeetingDataSource extends CalendarDataSource {

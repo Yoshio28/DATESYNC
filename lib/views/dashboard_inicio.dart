@@ -19,13 +19,20 @@ class Dashboardinicio extends StatelessWidget {
     ];
     return Scaffold(
       drawer: Navbar(),
-      backgroundColor: const Color.fromARGB(255, 0, 0, 0),
+      backgroundColor: const Color.fromARGB(255, 161, 150, 150),
       appBar: AppBar(
         title: Text('Inicio'),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: const Color.fromARGB(255, 1, 231, 181),
         foregroundColor: const Color.fromARGB(255, 255, 255, 255),
       ),
-      body: Padding(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.teal.shade300, Colors.blue.shade300],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
         padding: const EdgeInsets.all(16),
         child: GridView.count(
           crossAxisCount: 2,
@@ -34,30 +41,35 @@ class Dashboardinicio extends StatelessWidget {
           mainAxisSpacing: 16,
 
           children: [
-            _cajones(context, 'Sprints', Colors.deepPurple, DashboardTareas()),
+            _cajones(
+              context,
+              'Sprints',
+              const Color.fromARGB(255, 97, 146, 146),
+              DashboardTareas(),
+            ),
             _cajones(
               context,
               'Calendario',
-              const Color.fromARGB(255, 224, 135, 2),
+              const Color.fromARGB(255, 51, 134, 86),
               Calendario(),
             ),
             _cajones(
               context,
               'Analisis',
-              const Color.fromARGB(255, 0, 136, 64),
+              const Color.fromARGB(255, 4, 71, 35),
               DashboardAnalisis(),
             ),
             _cajones(
               context,
               'Equipo de trabajo',
-              const Color.fromARGB(255, 5, 5, 183),
+              const Color.fromARGB(255, 0, 8, 2),
               DashboardTeam(),
             ),
           ],
         ),
       ),
       bottomNavigationBar: CurvedNavigationBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.blue.shade300,
         animationCurve: Curves.easeInOut,
         animationDuration: Duration(milliseconds: 300),
         height: 60,
