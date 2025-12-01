@@ -1,0 +1,257 @@
+import 'package:flutter/material.dart';
+import 'package:datesync/model/NavBar.dart'; // Importa el widget de navegación lateral (drawer)
+import 'package:syncfusion_flutter_calendar/calendar.dart'; // Importa el plugin de calendario Syncfusion
+
+/// Widget principal para la pantalla de Calendario.
+/// Es un StatefulWidget porque necesita manejar el estado de la lista de appointments (eventos).
+class Calendario extends StatefulWidget {
+  @override
+  _CalendarioState createState() => _CalendarioState();
+}
+
+/// Estado del widget Calendario.
+/// Maneja la lista de appointments y la lógica para agregar nuevos eventos.
+class _CalendarioState extends State<Calendario> {
+  /// Lista mutable de appointments (eventos) que se muestra en el calendario.
+  /// Inicializada con eventos predeterminados obtenidos de getAppointments().
+  List<Appointment> _appointments = getAppointments();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      /// Drawer lateral para navegación (usando el widget Navbar importado).
+      drawer: Navbar(),
+      /// Barra de aplicación con título.
+      appBar: AppBar(title: Text('Calendario de eventos')),
+      /// Cuerpo principal: Calendario semanal usando SfCalendar.
+      /// - view: Vista semanal.
+      /// - initialDisplayDate: Fecha inicial (hoy).
+      /// - dataSource: Fuente de datos personalizada con la lista de appointments.
+      body: SfCalendar(
+        view: CalendarView.week,
+        initialDisplayDate: DateTime.now(),
+        dataSource: MeetingDataSource(_appointments),
+      ),
+      /// Botón flotante para agregar un nuevo evento.
+      /// Al presionarlo, abre el diálogo de agregar evento.
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddEventDialog(context),
+        child: Icon(Icons.add),
+      ),
+    );
+  }
+
+  /// Función que muestra un diálogo flotante (AlertDialog) para agregar un nuevo evento.
+  /// Permite al usuario ingresar: sprint (subject), fechas/horas de inicio y fin,
+  /// frecuencia de recurrencia y color del evento.
+  /// Al confirmar, agrega el evento a la lista _appointments y actualiza el estado.
+  void _showAddEventDialog(BuildContext context) {
+    /// Variables locales para almacenar los valores del formulario.
+    /// Se inicializan con valores predeterminados.
+    String subject = ''; // Texto del sprint/evento
+    DateTime startTime = DateTime.now(); // Fecha/hora de inicio (por defecto, ahora)
+    DateTime endTime = DateTime.now().add(Duration(hours: 1)); // Fecha/hora de fin (por defecto, 1 hora después)
+    String recurrence = 'Ninguna'; // Opción de recurrencia (Ninguna, Diaria, etc.)
+    Color selectedColor = Colors.blue; // Color seleccionado (por defecto, azul)
+
+    /// Muestra el diálogo usando showDialog.
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          /// Título del diálogo.
+          title: Text('Agregar Evento'),
+          /// Contenido del diálogo: Un SingleChildScrollView para permitir scroll si es necesario.
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min, // Minimiza el tamaño vertical
+              children: [
+                /// Campo de texto para ingresar el sprint (subject del evento).
+                TextField(
+                  decoration: InputDecoration(labelText: 'Sprint a Asignar'),
+                  onChanged: (value) => subject = value, // Actualiza la variable local
+                ),
+                /// Botón para seleccionar la fecha/hora de inicio.
+                /// Abre DatePicker y TimePicker secuencialmente.
+                TextButton(
+                  onPressed: () async {
+                    /// Selecciona la fecha usando DatePicker.
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: startTime,
+                      firstDate: DateTime(2000), // Fecha mínima
+                      lastDate: DateTime(2101), // Fecha máxima
+                    );
+                    if (pickedDate != null) {
+                      /// Selecciona la hora usando TimePicker.
+                      TimeOfDay? pickedTime = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(startTime),
+                      );
+                      if (pickedTime != null) {
+                        /// Actualiza startTime con la fecha y hora seleccionadas.
+                        setState(() {
+                          startTime = DateTime(
+                            pickedDate.year,
+                            pickedDate.month,
+                            pickedDate.day,
+                            pickedTime.hour,
+                            pickedTime.minute,
+                          );
+                        });
+                      }
+                    }
+                  },
+                  /// Muestra la fecha/hora actual de inicio (no se actualiza en tiempo real sin StatefulBuilder).
+                  child: Text('Inicio: ${startTime.toString()}'),
+                ),
+                /// Botón para seleccionar la fecha/hora de fin (similar al de inicio).
+                TextButton(
+                  onPressed: () async {
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: endTime,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2101),
+                    );
+                    if (pickedDate != null) {
+                      TimeOfDay? pickedTime = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(endTime),
+                      );
+                      if (pickedTime != null) {
+                        setState(() {
+                          endTime = DateTime(
+                            pickedDate.year,
+                            pickedDate.month,
+                            pickedDate.day,
+                            pickedTime.hour,
+                            pickedTime.minute,
+                          );
+                        });
+                      }
+                    }
+                  },
+                  child: Text('Fin: ${endTime.toString()}'),
+                ),
+                /// Dropdown para seleccionar la frecuencia de recurrencia.
+                /// Opciones: Ninguna, Diaria, Semanal, Mensual.
+                DropdownButton<String>(
+                  value: recurrence,
+                  items: ['Ninguna', 'Diaria', 'Semanal', 'Mensual'].map((
+                    String value,
+                  ) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (value) => setState(() => recurrence = value!), // Actualiza el estado
+                ),
+                /// Dropdown para seleccionar el color del evento.
+                /// Opciones: Colores predefinidos (rojo, azul, verde, amarillo, púrpura).
+                DropdownButton<Color>(
+                  value: selectedColor,
+                  items: [
+                    Colors.red,
+                    Colors.blue,
+                    Colors.green,
+                    Colors.yellow,
+                    Colors.purple,
+                  ].map((Color color) {
+                    return DropdownMenuItem<Color>(
+                      value: color,
+                      child: Container(width: 20, height: 20, color: color), // Muestra un cuadrado de color
+                    );
+                  }).toList(),
+                  onChanged: (value) => setState(() => selectedColor = value!), // Actualiza el estado
+                ),
+              ],
+            ),
+          ),
+          /// Acciones del diálogo: Botones Cancelar y Agregar.
+          actions: [
+            /// Botón para cancelar: Cierra el diálogo sin cambios.
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancelar'),
+            ),
+            /// Botón para agregar: Crea el Appointment y lo añade a la lista.
+            TextButton(
+              onPressed: () {
+                /// Genera la regla de recurrencia basada en la selección.
+                /// Usa el formato RFC 5545 para recurrenceRule (compatible con Syncfusion).
+                String? recurrenceRule;
+                if (recurrence == 'Diaria')
+                  recurrenceRule = 'FREQ=DAILY;COUNT=30'; // Repite diariamente por 30 días
+                else if (recurrence == 'Semanal')
+                  recurrenceRule = 'FREQ=WEEKLY;COUNT=4'; // Repite semanalmente por 4 semanas
+                else if (recurrence == 'Mensual')
+                  recurrenceRule = 'FREQ=MONTHLY;COUNT=1'; // Repite mensualmente por 1 mes
+
+                /// Crea un nuevo Appointment con los valores del formulario.
+                Appointment newAppointment = Appointment(
+                  startTime: startTime,
+                  endTime: endTime,
+                  subject: subject,
+                  color: selectedColor,
+                  recurrenceRule: recurrenceRule, // Puede ser null si no hay recurrencia
+                );
+
+                /// Añade el nuevo evento a la lista y actualiza el estado para refrescar el calendario.
+                setState(() {
+                  _appointments.add(newAppointment);
+                });
+
+                /// Cierra el diálogo.
+                Navigator.of(context).pop();
+              },
+              child: Text('Agregar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Función que devuelve una lista inicial de appointments (eventos predeterminados).
+/// En este caso, crea un evento de "Daily Meeting" que se repite diariamente.
+/// Esta función se llama al inicializar _appointments.
+List<Appointment> getAppointments() {
+  List<Appointment> meetings = <Appointment>[];
+  final DateTime today = DateTime.now();
+  /// Define la hora de inicio: Hoy a las 9:00 AM.
+  final DateTime startTime = DateTime(
+    today.year,
+    today.month,
+    today.day,
+    9,
+    0,
+    0,
+  );
+  /// Define la hora de fin: 1 hora después del inicio.
+  final DateTime endTime = startTime.add(const Duration(hours: 1));
+
+  /// Añade el evento predeterminado a la lista.
+  meetings.add(
+    Appointment(
+      startTime: startTime,
+      endTime: endTime,
+      subject: 'Daily Meeting',
+      color: Colors.blue,
+      recurrenceRule: 'FREQ=DAILY;COUNT=30', // Repite diariamente por 30 días
+    ),
+  );
+  return meetings;
+}
+
+/// Clase personalizada que extiende CalendarDataSource de Syncfusion.
+/// Se usa para proporcionar la lista de appointments al SfCalendar.
+/// Permite que el calendario lea y muestre los eventos.
+class MeetingDataSource extends CalendarDataSource {
+  /// Constructor que recibe la lista de appointments y la asigna a la propiedad 'appointments'.
+  MeetingDataSource(List<Appointment> source) {
+    appointments = source;
+  }
+}

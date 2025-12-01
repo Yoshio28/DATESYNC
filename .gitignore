@@ -6,6 +6,8 @@ macos/
 web/
 windows/
 lib/
+model/
+auth/
 
 # Miscellaneous
 *.class
