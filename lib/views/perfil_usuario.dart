@@ -14,8 +14,8 @@ class PerfilUsuario extends StatefulWidget {
 
 class _PerfilUsuarioState extends State<PerfilUsuario> {
   final ImagePicker _picker = ImagePicker();
-  String? _imageUrl; // Para URLs de Firebase (si existe)
-  String? _localImagePath; // Ruta local de la imagen
+  String? _imageUrl;
+  String? _localImagePath;
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +82,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
                     'foto': user.photoURL ?? '',
                     'telefono': user.phoneNumber ?? '',
                     'uid': user.uid,
-                    'rol': 'usuario', // Valor por defecto para rol
+                    'rol': 'usuario',
                     'creado': DateTime.now(),
                   })
                   .then((_) {
@@ -258,7 +258,6 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     );
   }
 
-  // Función para seleccionar y guardar imagen localmente
   Future<void> _pickAndSaveImage() async {
     final User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -315,7 +314,6 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     }
   }
 
-  // Función para mostrar diálogo de cambiar contraseña
   void _showChangePasswordDialog(BuildContext context, User user) {
     final TextEditingController passwordController = TextEditingController();
     final TextEditingController confirmPasswordController =

@@ -13,7 +13,6 @@ class _DashboardAnalisisState extends State<DashboardAnalisis> {
   @override
   Widget build(BuildContext context) {
     final User? user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
       return Scaffold(
         drawer: Navbar(),
