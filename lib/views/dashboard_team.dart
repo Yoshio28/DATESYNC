@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:datesync/model/NavBar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:datesync/model/teamController.dart';
 
 class DashboardTeam extends StatefulWidget {
   @override
@@ -11,6 +12,7 @@ class DashboardTeam extends StatefulWidget {
 class _DashboardTeamState extends State<DashboardTeam> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  final TeamController _controller = TeamController();
 
   @override
   void initState() {
@@ -26,88 +28,6 @@ class _DashboardTeamState extends State<DashboardTeam> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  void _addNewCollaborator() {
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController emailController = TextEditingController();
-    final TextEditingController roleController = TextEditingController();
-    String status = 'activo';
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Agregar Nuevo Colaborador'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(labelText: 'Nombre'),
-            ),
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(labelText: 'Correo Electrónico'),
-            ),
-            TextField(
-              controller: roleController,
-              decoration: InputDecoration(labelText: 'Rol'),
-            ),
-            DropdownButton<String>(
-              value: status,
-              items: ['activo', 'inactivo'].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (newValue) {
-                setState(() {
-                  status = newValue!;
-                });
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isEmpty ||
-                  emailController.text.isEmpty ||
-                  roleController.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Por favor, completa todos los campos.'),
-                  ),
-                );
-                return;
-              }
-
-              final newDoc = FirebaseFirestore.instance
-                  .collection('usuarios')
-                  .doc();
-              await newDoc.set({
-                'nombre': nameController.text,
-                'correo': emailController.text,
-                'rol': roleController.text,
-                'estado': status,
-                'uid': newDoc.id,
-                'creado': DateTime.now(),
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('Colaborador agregado')));
-            },
-            child: Text('Agregar'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -150,12 +70,14 @@ class _DashboardTeamState extends State<DashboardTeam> {
                 labelText: 'Buscar colaborador por nombre',
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
               ),
             ),
             SizedBox(height: 16),
 
             ElevatedButton(
-              onPressed: _addNewCollaborator,
+              onPressed: () => _controller.showAddCollaboratorDialog(context),
               child: Text('Ingresar Nuevo Colaborador'),
               style: ElevatedButton.styleFrom(
                 minimumSize: Size(double.infinity, 50),
@@ -192,7 +114,8 @@ class _DashboardTeamState extends State<DashboardTeam> {
                   return ListView.builder(
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
-                      final data = docs[index].data() as Map<String, dynamic>;
+                      final doc = docs[index];
+                      final data = doc.data() as Map<String, dynamic>;
                       final name = data['nombre'] ?? 'Sin nombre';
                       final email = data['correo'] ?? 'Sin correo';
                       final role = data['rol'] ?? 'Sin rol';
@@ -210,6 +133,11 @@ class _DashboardTeamState extends State<DashboardTeam> {
                             color: status == 'activo'
                                 ? Colors.green
                                 : Colors.red,
+                          ),
+                          onTap: () => _controller.showActionsDialog(
+                            context,
+                            doc.id,
+                            data,
                           ),
                         ),
                       );
